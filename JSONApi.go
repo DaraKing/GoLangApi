@@ -1,6 +1,10 @@
-package GoLang_API_2
+package main
 
-import "net/http"
+import (
+	"net/http"
+	"fmt"
+	"io/ioutil"
+)
 
 func optionsRequest(w http.ResponseWriter, r *http.Request) {
 	(w).Header().Set("Access-Control-Allow-Origin", "*")
@@ -18,4 +22,21 @@ func setupResponse(w *http.ResponseWriter, r *http.Request) {
 
 func getMessage(w http.ResponseWriter, r *http.Request) {
 
+	setupResponse(&w, r)
+
+	bodyBytes, _ := ioutil.ReadAll(r.Body)
+
+	bodyString := string(bodyBytes)
+
+	if checkMatchStart(bodyString) {
+		getMatchIdAndMapname(bodyString)
+	} else {
+		killer, _ := getKillerAndVictim(bodyString)
+
+		killerNick := getNickName(killer)
+		killerSteamID := getSteamID(killer)
+		killerTeam := getTeam(killer)
+
+		fmt.Println(killerNick + " - " + killerSteamID + " - " + killerTeam)
+	}
 }

@@ -1,4 +1,4 @@
-package GoLang_API_2
+package main
 
 import (
 	"fmt"
