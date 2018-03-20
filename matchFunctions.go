@@ -56,6 +56,10 @@ func getRank(message string) string {
 
 func getNickName(message string) string {
 
-	return strings.Split(message, getRank(message))[0]
+	reg, _ := regexp.Compile(`\<(.*?)\>`)
+	res := reg.ReplaceAllString(message,``)
+
+	fmt.Println(res)
+	return "kurac"
 
 }
