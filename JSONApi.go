@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"fmt"
 	"io/ioutil"
 )
 
@@ -30,13 +29,17 @@ func getMessage(w http.ResponseWriter, r *http.Request) {
 
 	if checkMatchStart(bodyString) {
 		getMatchIdAndMapname(bodyString)
-	} else {
-		killer, _ := getKillerAndVictim(bodyString)
+	}
 
-		killerNick := getNickName(killer)
-		killerSteamID := getSteamID(killer)
-		killerTeam := getTeam(killer)
+	if checkIsKill(bodyString) {
+		getInfoAboutKill(bodyString)
+	}
 
-		fmt.Println(killerNick + " - " + killerSteamID + " - " + killerTeam)
+	if checkRoundOver(bodyString) {
+		getRoundInfo(bodyString)
+	}
+
+	if isGameOver(bodyString) {
+		getGameStats(bodyString)
 	}
 }
