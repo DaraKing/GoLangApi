@@ -52,7 +52,7 @@ func isGameOver(message string) bool {
 	return false
 }
 
-func getRoundInfo(bodyString string) {
+func getRoundInfo(bodyString string) bool {
 	r, _ := regexp.Compile(`"(.*?)"`)
 	teamWin := r.FindAllString(bodyString, -1)
 
@@ -62,41 +62,38 @@ func getRoundInfo(bodyString string) {
 	fmt.Println("CT: " +removeQuotes(RoundResult[0]))
 	fmt.Println("T: " +removeQuotes(RoundResult[1]))
 
+	score := removeQuotes(RoundResult[0]) +":"+removeQuotes(RoundResult[1])
+
+	fmt.Println(score)
+
 	fmt.Println(removeQuotes(teamWin[0]))
+
+	return insertRound(teamWin[0],score)
+
 }
 
-func getInfoAboutKill(bodyString string) {
+func getInfoAboutKill(bodyString string) bool {
 	killer, victim, weapon := getKillerAndVictimAndWeapon(bodyString)
 
 	fmt.Println("Headshot: " ,checkIsHeadshot(bodyString))
 
-	killerNick := getNickName(killer)
-	killerSteamID := getSteamID(killer)
-	killerTeam := getTeam(killer)
+	return insertInKillsTable(getNickName(killer),getSteamID(killer),getTeam(killer),checkIsHeadshot(bodyString), getNickName(victim), getSteamID(victim), getTeam(victim), weapon)
 
-	victimNick := getNickName(victim)
-	victimSteamID := getSteamID(victim)
-	victimTeam := getTeam(victim)
-
-	fmt.Println(matchID)
-	fmt.Println(killerNick + " - " + killerSteamID + " - " + killerTeam + " - " +weapon)
-	fmt.Println(victimNick + " - " + victimSteamID + " - " + victimTeam)
 }
 
-func getGameStats(bodyString string) {
+func getGameStats(bodyString string) bool {
 
 	getMatchIdAndMapname(bodyString)
 
-	//TIME
 	r, _ := regexp.Compile(`[0-9]+ min`)
 	time := r.FindAllString(bodyString, -1)
-	fmt.Println("Time is: " +time[0])
+	fmt.Println(time[0])
 
-	//SCORE
 	r, _ = regexp.Compile(`[0-9]+:[0-9]+`)
 	score := r.FindAllString(bodyString, -1)
 	fmt.Println("Score is: " +score[0])
 
+	return endMatchInsert(score[0], time[0])
 }
 
 func getMatchIdAndMapname(bodyString string)  string{
@@ -106,7 +103,6 @@ func getMatchIdAndMapname(bodyString string)  string{
 
 	matchID, _  = strconv.Atoi(removeSlash(id[0]))
 
-	//MAP
 	r, _ = regexp.Compile(`/[a-zA-Z]+_[a-zA-Z|0-9]+`)
 	mapName := r.FindAllString(bodyString, -1)
 	return removeSlash(mapName[0])

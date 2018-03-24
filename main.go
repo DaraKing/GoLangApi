@@ -14,6 +14,9 @@ func handleRequest() {
 	myRouter.HandleFunc("/match", getMessage).Methods("POST")
 	myRouter.HandleFunc("/match", optionsRequest).Methods("OPTIONS")
 
+	myRouter.HandleFunc("/match/{id}", getMatch).Methods("GET")
+	myRouter.HandleFunc("/match/{id}", optionsRequest).Methods("OPTIONS")
+
 	log.Fatal(http.ListenAndServe(":8082", myRouter))
 }
 func main() {

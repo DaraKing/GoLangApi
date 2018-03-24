@@ -3,6 +3,11 @@ package main
 import (
 	"net/http"
 	"io/ioutil"
+	"fmt"
+	"github.com/gorilla/mux"
+	"strconv"
+	"log"
+	"encoding/json"
 )
 
 func optionsRequest(w http.ResponseWriter, r *http.Request) {
@@ -28,18 +33,66 @@ func getMessage(w http.ResponseWriter, r *http.Request) {
 	bodyString := string(bodyBytes)
 
 	if checkMatchStart(bodyString) {
-		getMatchIdAndMapname(bodyString)
+		mapName := getMatchIdAndMapname(bodyString)
+		status := startMatchInsert(mapName)
+
+		if status {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			fmt.Println(http.StatusInternalServerError)
+		}
 	}
 
 	if checkIsKill(bodyString) {
-		getInfoAboutKill(bodyString)
+		status := getInfoAboutKill(bodyString)
+
+		if status {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 
 	if checkRoundOver(bodyString) {
-		getRoundInfo(bodyString)
+		status := getRoundInfo(bodyString)
+
+		if status {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
 
 	if isGameOver(bodyString) {
-		getGameStats(bodyString)
+		status := getGameStats(bodyString)
+
+		if status {
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
 	}
+}
+
+func getMatch(w http.ResponseWriter, r *http.Request)  {
+	setupResponse(&w, r)
+
+	vars := mux.Vars(r)
+	key := vars["id"]
+	id,err := strconv.Atoi(key)
+
+	if err != nil {
+		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	matches, error := getMatchByID(id)
+
+	if error != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Println("Error while querying")
+	}
+
+	json.NewEncoder(w).Encode(matches)
 }
