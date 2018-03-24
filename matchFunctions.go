@@ -4,7 +4,10 @@ import (
 	"strings"
 	"fmt"
 	"regexp"
+	"strconv"
 )
+
+var matchID int
 
 func checkMatchStart(message string) bool {
 	 if strings.Index(message, "Match_Start") > 0  {
@@ -75,24 +78,17 @@ func getInfoAboutKill(bodyString string) {
 	victimSteamID := getSteamID(victim)
 	victimTeam := getTeam(victim)
 
+	fmt.Println(matchID)
 	fmt.Println(killerNick + " - " + killerSteamID + " - " + killerTeam + " - " +weapon)
 	fmt.Println(victimNick + " - " + victimSteamID + " - " + victimTeam)
 }
 
 func getGameStats(bodyString string) {
 
-	//ID
-	r, _ := regexp.Compile(`/[0-9]*/`)
-	id := r.FindAllString(bodyString, -1)
-	fmt.Println("Id: " +removeSlash(id[0]))
-
-	//MAP
-	r, _ = regexp.Compile(`/[a-zA-Z]+_[a-zA-Z|0-9]+`)
-	mapName := r.FindAllString(bodyString, -1)
-	fmt.Println("Map is: " +removeSlash(mapName[0]))
+	getMatchIdAndMapname(bodyString)
 
 	//TIME
-	r, _ = regexp.Compile(`[0-9]+ min`)
+	r, _ := regexp.Compile(`[0-9]+ min`)
 	time := r.FindAllString(bodyString, -1)
 	fmt.Println("Time is: " +time[0])
 
@@ -103,13 +99,18 @@ func getGameStats(bodyString string) {
 
 }
 
-func getMatchIdAndMapname(bodyString string)  {
-	info := strings.Split(bodyString, "on")[1]
-	id := strings.Split(info, "/")[1]
-	mapname := strings.Split(info, "/")[2]
-	mapName := strings.TrimSuffix(mapname, "\"")
+func getMatchIdAndMapname(bodyString string)  string{
+	r, _ := regexp.Compile(`/[0-9]*/`)
+	id := r.FindAllString(bodyString, -1)
+	fmt.Println("Id: " +removeSlash(id[0]))
 
-	fmt.Println(id,mapName)
+	matchID, _  = strconv.Atoi(removeSlash(id[0]))
+
+	//MAP
+	r, _ = regexp.Compile(`/[a-zA-Z]+_[a-zA-Z|0-9]+`)
+	mapName := r.FindAllString(bodyString, -1)
+	return removeSlash(mapName[0])
+
 }
 
 func getKillerAndVictimAndWeapon(bodyString string) (string,string,string){
