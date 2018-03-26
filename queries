@@ -1,0 +1,6 @@
+Query for all kills from STEAM_ID
+SELECT COUNT(killerSteamID) as Kills FROM Kills WHERE killerSteamID='STEAM_1:1:104017493';
+
+Query for all dies from STEAM_ID
+SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID='STEAM_1:0:211348049';
+

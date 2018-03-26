@@ -81,6 +81,14 @@ func getInfoAboutKill(bodyString string) bool {
 
 }
 
+func checkWinner(ct int, t int) string {
+	if ct > t {
+		return "CT"
+	}
+
+	return "T"
+}
+
 func getGameStats(bodyString string) bool {
 
 	getMatchIdAndMapname(bodyString)
@@ -91,9 +99,14 @@ func getGameStats(bodyString string) bool {
 
 	r, _ = regexp.Compile(`[0-9]+:[0-9]+`)
 	score := r.FindAllString(bodyString, -1)
-	fmt.Println("Score is: " +score[0])
+	score = strings.Split(score[0], ":")
 
-	return endMatchInsert(score[0], time[0])
+	ct, _ := strconv.Atoi(score[0])
+	t, _ := strconv.Atoi(score[1])
+
+	winner := checkWinner(ct, t)
+
+	return endMatchInsert(score[0], time[0], winner)
 }
 
 func getMatchIdAndMapname(bodyString string)  string{
