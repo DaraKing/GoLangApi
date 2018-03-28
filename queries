@@ -4,3 +4,6 @@ SELECT COUNT(killerSteamID) as Kills FROM Kills WHERE killerSteamID='STEAM_1:1:1
 Query for all dies from STEAM_ID
 SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID='STEAM_1:0:211348049';
 
+List of players sorted by kills
+
+SELECT Kills.killerNick, COUNT(*) FROM Kills,Matches WHERE Matches.mapName='fy_iceworld' AND Matches.id=Kills.matchID GROUP BY Kills.killerNick

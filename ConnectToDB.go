@@ -39,13 +39,13 @@ func startMatchInsert(mapName string) bool {
 	return true
 }
 
-func endMatchInsert(score string, length string, winner string) bool {
+func endMatchInsert(ct int,t int, length string, winner string) bool {
 
 	db := openDB()
-	stmt, err := db.Prepare("UPDATE Matches SET score=?, matchEnded=current_timestamp, matchLength=?, winner=? WHERE id=?")
+	stmt, err := db.Prepare("UPDATE Matches SET CT=?, TERRORIST=?, matchEnded=current_timestamp, matchLength=?, winner=? WHERE id=?")
 	checkErr(err)
 
-	result, err := stmt.Exec(score,length,winner,matchID)
+	result, err := stmt.Exec(ct,t,length,winner,matchID)
 
 	defer stmt.Close()
 

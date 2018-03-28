@@ -86,7 +86,7 @@ func checkWinner(ct int, t int) string {
 		return "CT"
 	}
 
-	return "T"
+	return "TERRORIST"
 }
 
 func getGameStats(bodyString string) bool {
@@ -106,7 +106,8 @@ func getGameStats(bodyString string) bool {
 
 	winner := checkWinner(ct, t)
 
-	return endMatchInsert(score[0], time[0], winner)
+	return endMatchInsert(ct, t, time[0], winner)
+
 }
 
 func getMatchIdAndMapname(bodyString string)  string{
