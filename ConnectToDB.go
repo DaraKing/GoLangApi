@@ -103,6 +103,18 @@ type Match struct {
 	Score        string `json:"score"`
 }
 
+type Players struct {
+	Kills int `json:"Kills"`
+	Died int `json:"Died"`
+}
+
+type MapInfo struct {
+	CT 			int		`json:"ct"`
+	TERRORIST 	int		`json:"terrorist"`
+	Players    	int    	`json:"Players"`
+	KillerNick 	string 	`json:"killerNick"`
+}
+
 func getMatchByID(matchID int) ([]Match, error){
 
 	db := openDB()
@@ -122,5 +134,62 @@ func getMatchByID(matchID int) ([]Match, error){
 	db.Close()
 
 	return matches,err
+}
 
+func getPlayerInfo(steamID string) ([]Players, error){
+
+	db := openDB()
+	var player Players
+	var players []Players
+
+	row, err := db.Prepare("SELECT COUNT(killerSteamID) as Kills FROM Kills WHERE killerSteamID=?")
+	checkErr(err)
+
+	rows, err := row.Query(steamID)
+
+	for rows.Next() {
+		rows.Scan(&player.Kills)
+	}
+
+	row, err = db.Prepare("SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID=?")
+	checkErr(err)
+
+	rows, err = row.Query(steamID)
+
+	for rows.Next() {
+		rows.Scan(&player.Died)
+		players = append(players, player)
+	}
+
+	db.Close()
+
+	return players, err
+}
+
+func getMapInfo(name string) ([]MapInfo, error){
+
+	db := openDB()
+	var mapInfo MapInfo
+	var info []MapInfo
+
+	row, err := db.Prepare("SELECT CT,TERRORIST FROM Matches WHERE mapName=?")
+	checkErr(err)
+	rows, err := row.Query(name)
+
+	for rows.Next() {
+		rows.Scan(&mapInfo.CT, &mapInfo.TERRORIST)
+	}
+
+	row, err = db.Prepare("SELECT Kills.killerNick, COUNT(*) as Players FROM Kills,Matches WHERE Matches.mapName=? AND Matches.id=Kills.matchID GROUP BY Kills.killerNick")
+	checkErr(err)
+	rows, err = row.Query(name)
+
+	for rows.Next() {
+		rows.Scan(&mapInfo.KillerNick, &mapInfo.Players)
+		info = append(info, mapInfo)
+	}
+
+	db.Close()
+
+	return info,err
 }

@@ -96,3 +96,33 @@ func getMatch(w http.ResponseWriter, r *http.Request)  {
 
 	json.NewEncoder(w).Encode(matches)
 }
+
+func getPlayer(w http.ResponseWriter, r *http.Request) {
+	setupResponse(&w, r)
+
+	vars := mux.Vars(r)
+	key := vars["steamID"]
+
+	player, err := getPlayerInfo(key)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	json.NewEncoder(w).Encode(player)
+}
+
+func mapInfo(w http.ResponseWriter, r *http.Request)  {
+	setupResponse(&w, r)
+
+	vars := mux.Vars(r)
+	key := vars["name"]
+
+	mapInfo, err := getMapInfo(key)
+
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	json.NewEncoder(w).Encode(mapInfo)
+}

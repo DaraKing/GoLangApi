@@ -17,6 +17,12 @@ func handleRequest() {
 	myRouter.HandleFunc("/match/{id}", getMatch).Methods("GET")
 	myRouter.HandleFunc("/match/{id}", optionsRequest).Methods("OPTIONS")
 
+	myRouter.HandleFunc("/player/{steamID}", getPlayer).Methods("GET")
+	myRouter.HandleFunc("/player/{steamID}", optionsRequest).Methods("OPTIONS")
+
+	myRouter.HandleFunc("/map/{name}", mapInfo).Methods("GET")
+	myRouter.HandleFunc("/map/{name}", optionsRequest).Methods("OPTIONS")
+
 	log.Fatal(http.ListenAndServe(":8082", myRouter))
 }
 func main() {

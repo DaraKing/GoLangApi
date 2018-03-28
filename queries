@@ -7,3 +7,17 @@ SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID='STEAM_1:0:21
 List of players sorted by kills
 
 SELECT Kills.killerNick, COUNT(*) FROM Kills,Matches WHERE Matches.mapName='fy_iceworld' AND Matches.id=Kills.matchID GROUP BY Kills.killerNick
+
+Na ovome principu nešto 
+SELECT id, 
+CASE
+WHEN Matches.winner = 'TERRORIST' 
+THEN TERRORIST 
+ELSE CT 
+END as rounds FROM Matches,Kills WHERE (Kills.killerSteamID='STEAM_1:0:211348049' AND Kills.killerTeam=Matches.winner) OR (Kills.victimSteamID='STEAM_1:0:211348049' AND Kills.victimTeam=Matches.winner)
+
+Ili ovako
+
+SELECT id,
+IF(Matches.winner = 'CT', Matches.CT, Matches.TERRORIST) as rounds 
+FROM Matches,Kills WHERE (Kills.killerSteamID='STEAM_1:1:104017493' AND Kills.killerTeam=Matches.winner) OR (Kills.victimSteamID='STEAM_1:1:104017493' AND Kills.victimTeam=Matches.winner)
