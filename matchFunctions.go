@@ -2,43 +2,41 @@ package main
 
 import (
 	"strings"
-	"fmt"
 	"regexp"
 	"strconv"
+	"github.com/satori/go.uuid"
 )
 
-var matchID int
+var matchID uuid.UUID
+
+func getRegExParams(regEx, inputString string) map[string]string {
+
+	var compRegEx = regexp.MustCompile(regEx)
+	match := compRegEx.FindStringSubmatch(inputString)
+
+	paramsMap := make(map[string]string)
+	for i, name := range compRegEx.SubexpNames() {
+		if i > 0 && i <= len(match) {
+			paramsMap[name] = match[i]
+		}
+	}
+	return paramsMap
+}
 
 func checkMatchStart(message string) bool {
-	 if strings.Index(message, "Match_Start") > 0  {
-	 	return true
-	 }
-
-	 return false
+	return strings.Index(message, `"Match_Start"`) > 0
 }
 
 func checkIsKill(message string) bool {
-	if strings.Index(message, "killed") > 0  {
-		return true
-	}
-
-	return false
+	return strings.Index(message, "killed") > 0
 }
 
 func checkRoundOver(message string) bool {
-	if strings.Index(message, "SFUI_Notice") > 0 {
-		return true
-	}
-
-	return false
+	return strings.Index(message, "SFUI_Notice") > 0
 }
 
 func checkIsHeadshot(message string) bool {
-	if strings.Index(message, "headshot") > 0 {
-		return true
-	}
-
-	return false
+	return message == "(headshot)"
 }
 
 func isGameOver(message string) bool {
@@ -50,34 +48,24 @@ func isGameOver(message string) bool {
 	}
 
 	return false
+	//return strings.Index(message, `Game Over: `) > 0
 }
 
 func getRoundInfo(bodyString string) bool {
-	r, _ := regexp.Compile(`"(.*?)"`)
-	teamWin := r.FindAllString(bodyString, -1)
 
-	regexNum, _ := regexp.Compile(`"([0-9])"`)
-	RoundResult := regexNum.FindAllString(bodyString, -1)
+	CSRoundRegEx := `^Team "(?P<teamWinner>.+)" triggered ".+" \(CT "(?P<ctScore>.+)"\) \(T "(?P<tScore>.+)"\)$`
+	CSVars := getRegExParams(CSRoundRegEx, bodyString)
 
-	fmt.Println("CT: " +removeQuotes(RoundResult[0]))
-	fmt.Println("T: " +removeQuotes(RoundResult[1]))
+	score := CSVars["ctScore"]+":"+CSVars["tScore"]
 
-	score := removeQuotes(RoundResult[0]) +":"+removeQuotes(RoundResult[1])
-
-	fmt.Println(score)
-
-	fmt.Println(removeQuotes(teamWin[0]))
-
-	return insertRound(teamWin[0],score)
-
+	return insertRound(CSVars["teamWinner"], score)
 }
 
 func getInfoAboutKill(bodyString string) bool {
-	killer, victim, weapon := getKillerAndVictimAndWeapon(bodyString)
-
-	fmt.Println("Headshot: " ,checkIsHeadshot(bodyString))
-
-	return insertInKillsTable(getNickName(killer),getSteamID(killer),getTeam(killer),checkIsHeadshot(bodyString), getNickName(victim), getSteamID(victim), getTeam(victim), weapon)
+	CSKillRegEx := `^"(?P<userOneName>.+)<\d+><(?P<userOneSteamId>.+)><(?P<userOneTeam>.+)>" \[.+\] killed "(?P<userTwoName>.+)<\d+><(?P<userTwoSteamId>.+)><(?P<userTwoTeam>.+)>" \[.+\] with "(?P<weaponName>.+)" ?(?P<isHeadshot>\(.*\))?$`
+	CSVars := getRegExParams(CSKillRegEx, bodyString)
+	return insertInKillsTable(CSVars["userOneName"],CSVars["userOneSteamId"],CSVars["userOneTeam"],checkIsHeadshot(CSVars["isHeadshot"]),
+		CSVars["userTwoName"], CSVars["userTwoSteamId"], CSVars["userTwoTeam"], CSVars["weaponName"])
 
 }
 
@@ -91,86 +79,77 @@ func checkWinner(ct int, t int) string {
 
 func getGameStats(bodyString string) bool {
 
-	getMatchIdAndMapname(bodyString)
+	CSMatchEndRegEx := `^Game Over: casual \d+ workshop/(?P<mapID>\d+)/(?P<mapName>[a-zA-Z]+_[a-zA-Z0-9]+) score (?P<ct>\d+):(?P<t>\d+) after (?P<minutes>\d+) min$`
+	CSVars := getRegExParams(CSMatchEndRegEx, bodyString)
 
-	r, _ := regexp.Compile(`[0-9]+ min`)
-	time := r.FindAllString(bodyString, -1)
-	fmt.Println(time[0])
+	ct, _ := strconv.Atoi(CSVars["ct"])
+	t, _ := strconv.Atoi(CSVars["t"])
+	length, _ := strconv.Atoi(CSVars["minutes"])
 
-	r, _ = regexp.Compile(`[0-9]+:[0-9]+`)
-	score := r.FindAllString(bodyString, -1)
-	score = strings.Split(score[0], ":")
+	return endMatchInsert(ct, t, length, checkWinner(ct,t))
+}
 
-	ct, _ := strconv.Atoi(score[0])
-	t, _ := strconv.Atoi(score[1])
-
-	winner := checkWinner(ct, t)
-
-	return endMatchInsert(ct, t, time[0], winner)
+func getMatchIdAndMapname(bodyString string)  bool{
+	CSMatchRegEx := `World triggered "Match_Start" on "workshop/(?P<mapId>[0-9]+)/(?P<mapName>[a-zA-Z]+_[a-zA-Z0-9]+)"`
+	CSVars := getRegExParams(CSMatchRegEx, bodyString)
+	mapID, _ := strconv.Atoi(CSVars["mapId"])
+	matchID = uuid.Must(uuid.NewV4())
+	return startMatchInsert(matchID, CSVars["mapName"], mapID)
 
 }
 
-func getMatchIdAndMapname(bodyString string)  string{
-	r, _ := regexp.Compile(`/[0-9]*/`)
-	id := r.FindAllString(bodyString, -1)
-	fmt.Println("Id: " +removeSlash(id[0]))
-
-	matchID, _  = strconv.Atoi(removeSlash(id[0]))
-
-	r, _ = regexp.Compile(`/[a-zA-Z]+_[a-zA-Z|0-9]+`)
-	mapName := r.FindAllString(bodyString, -1)
-	return removeSlash(mapName[0])
-
-}
-
-func getKillerAndVictimAndWeapon(bodyString string) (string,string,string){
-	r, _ := regexp.Compile(`"(.*?)"`)
-	result := r.FindAllString(bodyString, -1)
-
-	return result[0], result[1], removeQuotes(result[2])
-}
-
-func removeChar(char string) string{
-	reg, _ := regexp.Compile(`\<|\>`)
-	res := reg.ReplaceAllString(char,``)
-
-	return res
-}
-
-func removeQuotes(char string) string {
-	reg, _ := regexp.Compile(`\"`)
-	res := reg.ReplaceAllString(char ,``)
-
-	return res
-}
-
-func removeSlash(char string) string {
-	reg, _ := regexp.Compile(`\/`)
-	res := reg.ReplaceAllString(char ,``)
-
-	return res
-}
-
-func getSteamID(message string) string {
-
-	reg, _ := regexp.Compile(`\<(.*?)\>`)
-	res := reg.FindAllString(message, -1)
-
-	return removeChar(res[1])
-}
-
-func getTeam(message string) string {
-	reg, _ := regexp.Compile(`\<(.*?)\>`)
-	res := reg.FindAllString(message, -1)
-
-	return removeChar(res[2])
-}
-
-func getNickName(message string) string {
-
-	reg, _ := regexp.Compile(`\<(.*?)\>|\"`)
-	res := reg.ReplaceAllString(message,``)
-
-	return res
-
-}
+//func getKillerAndVictimAndWeapon(bodyString string) (string,string,string){
+//	r, _ := regexp.Compile(`"(.*?)"`)
+//	result := r.FindAllString(bodyString, -1)
+//
+//	return result[0], result[1], removeQuotes(result[2])
+//}
+//
+//func removeChar(char string) string{
+//	reg, _ := regexp.Compile(`\<|\>`)
+//	res := reg.ReplaceAllString(char,``)
+//
+//	return res
+//}
+//
+//func removeQuotes(char string) string {
+//	reg, _ := regexp.Compile(`\"`)
+//	res := reg.ReplaceAllString(char ,``)
+//
+//	return res
+//}
+//
+//func removeSlash(char string) string {
+//	reg, _ := regexp.Compile(`\/`)
+//	res := reg.ReplaceAllString(char ,``)
+//
+//	return res
+//}
+//
+//func split(message string) []string {
+//	reg, _ := regexp.Compile(`\<(.*?)\>`)
+//	res := reg.FindAllString(message, -1)
+//
+//	return res
+//}
+//
+//func getSteamID(message string) string {
+//	res := split(message)
+//
+//	return removeChar(res[1])
+//}
+//
+//func getTeam(message string) string {
+//	res := split(message)
+//
+//	return removeChar(res[2])
+//}
+//
+//func getNickName(message string) string {
+//
+//	reg, _ := regexp.Compile(`\<(.*?)\>|\"`)
+//	res := reg.ReplaceAllString(message,``)
+//
+//	return res
+//
+//}

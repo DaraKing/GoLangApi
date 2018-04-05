@@ -21,3 +21,31 @@ Ili ovako
 SELECT id,
 IF(Matches.winner = 'CT', Matches.CT, Matches.TERRORIST) as rounds 
 FROM Matches,Kills WHERE (Kills.killerSteamID='STEAM_1:1:104017493' AND Kills.killerTeam=Matches.winner) OR (Kills.victimSteamID='STEAM_1:1:104017493' AND Kills.victimTeam=Matches.winner)
+
+//TASKS
+
+// You can edit this code!
+// Click here and start typing.
+package main
+
+import (
+	"fmt"
+	"regexp"
+	)
+
+func getRegExParams(regEx, inputString string) map[string]string {
+
+	var compRegEx = regexp.MustCompile(regEx)
+	match := compRegEx.FindStringSubmatch(inputString)
+
+	paramsMap := make(map[string]string)
+	for i, name := range compRegEx.SubexpNames() {
+		if i > 0 && i <= len(match) {
+			paramsMap[name] = match[i]
+		}
+	}
+	return paramsMap
+}
+
+func main() {
+	CSRoundRegEx := `World triggered "Match_Start" on "workshop/(?P<mapId>[0-9]+)/(?P<mapName>[a-zA-Z]+_[a-zA-Z0-9]+)"`

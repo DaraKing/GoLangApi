@@ -33,8 +33,7 @@ func getMessage(w http.ResponseWriter, r *http.Request) {
 	bodyString := string(bodyBytes)
 
 	if checkMatchStart(bodyString) {
-		mapName := getMatchIdAndMapname(bodyString)
-		status := startMatchInsert(mapName)
+		status := getMatchIdAndMapname(bodyString)
 
 		if status {
 			w.WriteHeader(http.StatusOK)

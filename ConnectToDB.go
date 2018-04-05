@@ -3,7 +3,31 @@ package main
 import (
 	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/satori/go.uuid"
 )
+
+type Match struct {
+	ID           	int    	`json:"id"`
+	Length       	string 	`json:"length"`
+	MapName      	string 	`json:"mapName"`
+	MatchEnded   	string 	`json:"matchEnded"`
+	MatchStarted 	string 	`json:"matchStarted"`
+	CT        		int 	`json:"CT"`
+	TERRORIST       int 	`json:"TERRORIST"`
+}
+
+type Players struct {
+	Kills 	int 	`json:"Kills"`
+	Died 	int 	`json:"Died"`
+	Wins 	int 	`json:"Wins"`
+}
+
+type MapInfo struct {
+	CT 			int		`json:"ct"`
+	TERRORIST 	int		`json:"terrorist"`
+	Players    	int    	`json:"Players"`
+	KillerNick 	string 	`json:"killerNick"`
+}
 
 func openDB() *sql.DB {
 	db, err := sql.Open("mysql", "root:dario123@/CounterStrikeDB")
@@ -21,15 +45,15 @@ func checkErr(err error)  {
 	}
 }
 
-func startMatchInsert(mapName string) bool {
+func startMatchInsert(matchID uuid.UUID,mapName string, mapID int) bool {
 
 	db := openDB()
-	stmIns, err := db.Prepare("INSERT INTO Matches(id,mapName, matchStarted) VALUES (?,?, current_timestamp)")
+	stmIns, err := db.Prepare("INSERT INTO Matches(id,map_ID,mapName, matchStarted) VALUES (?,?,?, current_timestamp)")
 	checkErr(err)
 
 	defer stmIns.Close()
 
-	_ , err = stmIns.Exec(matchID,mapName)
+	_ , err = stmIns.Exec(matchID, mapID, mapName)
 
 	if err != nil {
 		panic(err.Error())
@@ -39,7 +63,7 @@ func startMatchInsert(mapName string) bool {
 	return true
 }
 
-func endMatchInsert(ct int,t int, length string, winner string) bool {
+func endMatchInsert(ct int,t int, length int, winner string) bool {
 
 	db := openDB()
 	stmt, err := db.Prepare("UPDATE Matches SET CT=?, TERRORIST=?, matchEnded=current_timestamp, matchLength=?, winner=? WHERE id=?")
@@ -94,40 +118,19 @@ func insertRound(teamWin string, currentScore string) bool{
 	return true
 }
 
-type Match struct {
-	ID           int    `json:"id"`
-	Length       string `json:"length"`
-	MapName      string `json:"mapName"`
-	MatchEnded   string `json:"matchEnded"`
-	MatchStarted string `json:"matchStarted"`
-	Score        string `json:"score"`
-}
-
-type Players struct {
-	Kills int `json:"Kills"`
-	Died int `json:"Died"`
-}
-
-type MapInfo struct {
-	CT 			int		`json:"ct"`
-	TERRORIST 	int		`json:"terrorist"`
-	Players    	int    	`json:"Players"`
-	KillerNick 	string 	`json:"killerNick"`
-}
-
 func getMatchByID(matchID int) ([]Match, error){
 
 	db := openDB()
 	var match Match
 	var matches []Match
 
-	row, err := db.Prepare("SELECT id,mapName,matchStarted,score,matchEnded,length FROM Matches WHERE id= ?")
+	row, err := db.Prepare("SELECT id,mapName,matchStarted,CT,TERRORIST,matchEnded,matchLength FROM Matches WHERE id= ?")
 	checkErr(err)
 
 	rows , err := row.Query(matchID)
 
 	for rows.Next() {
-		rows.Scan(&match.ID, &match.MapName, &match.MatchStarted, &match.Score ,&match.MatchEnded, &match.Length)
+		rows.Scan(&match.ID, &match.MapName, &match.MatchStarted, &match.CT, &match.TERRORIST,&match.MatchEnded, &match.Length)
 		matches = append(matches, match)
 	}
 
@@ -142,25 +145,34 @@ func getPlayerInfo(steamID string) ([]Players, error){
 	var player Players
 	var players []Players
 
-	row, err := db.Prepare("SELECT COUNT(killerSteamID) as Kills FROM Kills WHERE killerSteamID=?")
+	row, err := db.Prepare(`
+	SELECT *
+	FROM (SELECT COUNT(killerSteamID) as Kills FROM Kills WHERE killerSteamID=?) AS PlayerKills
+	JOIN
+	(SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID=?) AS PlayerDies
+	ON 1
+	`)
 	checkErr(err)
 
-	rows, err := row.Query(steamID)
+	rows, err := row.Query(steamID, steamID)
 
 	for rows.Next() {
-		rows.Scan(&player.Kills)
+		rows.Scan(&player.Kills, &player.Died)
 	}
 
-	row, err = db.Prepare("SELECT COUNT(victimSteamID) as Died FROM Kills WHERE victimSteamID=?")
+	row, err = db.Prepare(`
+	SELECT DISTINCT COUNT(teamWin) as Wins
+	FROM Rounds JOIN Kills
+	ON (teamWin=Kills.killerTeam AND Kills.killerSteamID=?) OR (TeamWin=Kills.victimTeam AND Kills.victimSteamID=?) AND Rounds.matchID=Kills.matchID
+	GROUP BY(roundID)`)
 	checkErr(err)
 
-	rows, err = row.Query(steamID)
+	rows, err = row.Query(steamID, steamID)
 
 	for rows.Next() {
-		rows.Scan(&player.Died)
+		rows.Scan(&player.Wins)
 		players = append(players, player)
 	}
-
 	db.Close()
 
 	return players, err
